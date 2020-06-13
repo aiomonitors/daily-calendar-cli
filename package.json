@@ -1,0 +1,9 @@
+{
+  "name": "daily-calendar",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "googleapis": "^52.1.0"
+  }
+}
