@@ -2,6 +2,7 @@ const {
     Select,
     Toggle
 } = require('enquirer');
+const helpers = require('./helpers');
 
 const mainPrompt = async () => {
     let answer = await new Select({
@@ -24,10 +25,6 @@ const addItemPrompt = async (choice, remainingTime) => {
 
     return answer;
 }
-
-const checkMinutesValid = async (toCheck, remainingTime) => {
-    return toCheck <= remainingTime;
-};
 
 const workSetup = async () => {
     const choiceName = 'Work';

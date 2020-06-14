@@ -1,6 +1,7 @@
 const fs = require('fs');
 const readline = require('readline');
 const { google } = require('googleapis');
+const { getDefaultWorkItems } = require('./helpers');
 
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
@@ -95,7 +96,6 @@ async function listEvents(auth) {
   // const d = `${new Date(+new Date() + 1293120).toISOString().split('.')[0]}Z`;
   // const d2 = `${new Date(+new Date() + 129312021).toISOString().split('.')[0]}Z`;
   // calendar.events.insert({
-  //   calendarId: '',
   //   requestBody: {
   //     summary: 'Test',
   //     start: {
@@ -107,6 +107,31 @@ async function listEvents(auth) {
   //   },
   // }, (err, res) => {
   //   if (err) return console.log(err);
-  //   console.log(res.data);
+  //   console.log(res);
   // });
+
+  const items = getDefaultWorkItems('exid');
+  for (let i = 0; i < items.length; i += 1) {
+    // eslint-disable-next-line consistent-return
+    const {
+      summary,
+      start,
+      end,
+      calendarId,
+    } = items[i];
+    const body = {
+      calendarId,
+      requestBody: {
+        summary,
+        start,
+        end,
+      },
+    };
+
+    // eslint-disable-next-line consistent-return
+    calendar.events.insert(body, (err, res) => {
+      if (err) return console.log(err);
+      console.log(res.data.status);
+    });
+  }
 }
