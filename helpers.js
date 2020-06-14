@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 const checkMinutesValid = async (toCheck, remainingTime) => toCheck <= remainingTime;
 
 const formatDate = (date) => `${date.toISOString().split('.')[0]}Z`;
@@ -16,46 +18,55 @@ const addTimeToDate = (
     minutes,
 ) => new Date(date.getTime() + (hours * 60 * 60000) + (minutes * 60000));
 
-const getDefaultWorkItems = (calendarId) => {
-    const currentTime = getTomorrowDate();
-    const items = [];
-    let evStart = addTimeToDate(currentTime, 9, 30);
-    let evEnd = addTimeToDate(evStart, 0, 15);
-    items.push({
+const getStartAndEnd = (date, startTime, duration) => {
+    const startHours = startTime.split(':')[0];
+    const startMinutes = startTime.split(':')[1];
+
+    const start = addTimeToDate(date, +startHours, +startMinutes);
+    const end = addTimeToDate(start, 0, duration);
+    return {
+        start,
+        end,
+    };
+};
+
+const constructEvent = (name, calendarId, baseDate, startTime, duration) => {
+    const evTimes = getStartAndEnd(baseDate, startTime, duration);
+    return {
         calendarId,
-        summary: 'Be back home',
+        summary: name,
         start: {
-            dateTime: formatDate(evStart),
+            dateTime: formatDate(evTimes.start),
         },
         end: {
-            dateTime: formatDate(evEnd),
+            dateTime: formatDate(evTimes.end),
         },
-    });
-    evStart = addTimeToDate(currentTime, 9, 45);
-    evEnd = addTimeToDate(evStart, 0, 45);
-    items.push({
-        calendarId,
-        summary: 'Sort through notifications',
-        start: {
-            dateTime: formatDate(evStart),
-        },
-        end: {
-            dateTime: formatDate(evEnd),
-        },
-    });
-    evStart = addTimeToDate(currentTime, 10, 30);
-    evEnd = addTimeToDate(evStart, 0, 30);
-    items.push({
-        calendarId,
-        summary: 'Eat breakfast [Log out of Snapchat]',
-        start: {
-            dateTime: formatDate(evStart),
-        },
-        end: {
-            dateTime: formatDate(evEnd),
-        },
-    });
-    return items;
+    };
+};
+
+const getDefaultItems = (fileName, dayType, calendarId) => {
+    const exists = fs.existsSync(fileName);
+    if (exists) {
+        const fileData = JSON.parse(fs.readFileSync(fileName, 'utf8'));
+        if (Object.keys(fileData).includes(dayType)) {
+            const dayTypeData = fileData[dayType];
+            const events = [];
+            const baseDate = getTomorrowDate();
+
+            for (let i = 0; i < dayTypeData.length; i += 1) {
+                const {
+                    name,
+                    start,
+                    duration,
+                } = dayTypeData[i];
+                events.push(constructEvent(name, calendarId, baseDate, start, duration));
+            }
+
+            return events;
+        }
+            throw new Error('Invalid day type provided');
+    }
+        throw new Error('File was not found');
 };
 
 module.exports = {
@@ -63,5 +74,5 @@ module.exports = {
     getTomorrowDate,
     addTimeToDate,
     formatDate,
-    getDefaultWorkItems,
+    getDefaultItems,
 };
