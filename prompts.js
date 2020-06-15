@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 const {
     Select,
     Toggle,
@@ -34,7 +35,10 @@ const addItemForm = async () => {
 const workSetup = async () => {
     const choiceName = 'Work';
     const calendarID = 'primary';
-    const tomorrow = helpers.getTomorrowDate();
+    let baseDate = helpers.getTomorrowDate();
+    if (+new Date().getHours() <= 20) {
+        baseDate = helpers.getStartOfDay();
+    }
     const items = helpers.getDefaultItems('default.json', 'work', calendarID);
     const morningWorkout = await new Select({
         name: 'Workout',
@@ -45,7 +49,7 @@ const workSetup = async () => {
     let totalMinutes = 360;
 
     // Add morning workout to the routine
-    items.push(helpers.constructEvent(morningWorkout, calendarID, tomorrow, '09:00', 30));
+    items.push(helpers.constructEvent(morningWorkout, calendarID, baseDate, '09:00', 30));
 
     let shouldAddItem = await addItemPrompt(choiceName, totalMinutes);
     /* Keeps track of the time of the day we are at for work */
@@ -58,15 +62,16 @@ const workSetup = async () => {
                 const {
                     name,
                     time,
-                // eslint-disable-next-line no-await-in-loop
                 } = await addItemForm();
                 if (+time <= totalMinutes) {
                     const startTime = helpers.getFormattedTime(currentTime);
-                    items.push(helpers.constructEvent(name,
+                    items.push(helpers.constructEvent(
+                        name,
                         calendarID,
-                        tomorrow,
+                        baseDate,
                         startTime,
-                        +time));
+                        +time,
+                    ));
                     // Update current time to reflect the end time of the last event
                     currentTime = helpers.addTimeToDate(currentTime, 0, +time);
                     totalMinutes -= +time;
@@ -81,14 +86,16 @@ const workSetup = async () => {
         while (totalMinutes > 0 && shouldAddItem);
 
         if (totalMinutes > 0) {
-            items.push(helpers.constructEvent('Work',
-            calendarID,
-            tomorrow,
-            helpers.getFormattedTime(currentTime),
-            totalMinutes));
+            items.push(helpers.constructEvent(
+                'Work',
+                calendarID,
+                baseDate,
+                helpers.getFormattedTime(currentTime),
+                totalMinutes,
+            ));
         }
     } else {
-        items.push(helpers.constructEvent('Work', calendarID, tomorrow, '11:00', 360));
+        items.push(helpers.constructEvent('Work', calendarID, baseDate, '11:00', 360));
     }
     return items;
 };

@@ -4,9 +4,13 @@ const checkMinutesValid = async (toCheck, remainingTime) => toCheck <= remaining
 
 const formatDate = (date) => `${date.toISOString().split('.')[0]}Z`;
 
-const getTomorrowDate = () => {
+const getStartOfDay = () => {
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+};
+
+const getTomorrowDate = () => {
+    const startOfToday = getStartOfDay();
     const tomorrow = new Date(startOfToday);
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow;
@@ -62,7 +66,10 @@ const getDefaultItems = (fileName, dayType, calendarId) => {
         if (Object.keys(fileData).includes(dayType)) {
             const dayTypeData = fileData[dayType];
             const events = [];
-            const baseDate = getTomorrowDate();
+            let baseDate = getTomorrowDate();
+            if (+new Date().getHours() <= 20) {
+                baseDate = getStartOfDay();
+            }
 
             for (let i = 0; i < dayTypeData.length; i += 1) {
                 const {
@@ -88,4 +95,5 @@ module.exports = {
     getDefaultItems,
     getFormattedTime,
     constructEvent,
+    getStartOfDay,
 };
