@@ -5,19 +5,11 @@ const {
 } = require('enquirer');
 const helpers = require('./helpers');
 
-const mainPrompt = async () => {
-    const answer = await new Select({
-        name: 'choice',
-        message: 'What kind of day would you like to have tomorrow?',
-        choices: ['Work', 'Leisure'],
-    }).run();
-    return answer;
-};
-
 const addItemPrompt = async (choice, remainingTime) => {
     let answer;
     if (choice === 'Work') {
         answer = await new Toggle({
+            // eslint-disable-next-line no-useless-escape
             message: `Would you like to add an event to tomorrow\'s work schedule? (${remainingTime} minutes available to allocate.)`,
             enabled: 'Yes',
             disabled: 'Nope',
@@ -41,7 +33,7 @@ const addItemForm = async () => {
 
 const workSetup = async () => {
     const choiceName = 'Work';
-    const calendarID = 'CALENDARIDHERE';
+    const calendarID = 'primary';
     const tomorrow = helpers.getTomorrowDate();
     const items = helpers.getDefaultItems('default.json', 'work', calendarID);
     const morningWorkout = await new Select({
@@ -56,6 +48,7 @@ const workSetup = async () => {
     items.push(helpers.constructEvent(morningWorkout, calendarID, tomorrow, '09:00', 30));
 
     let shouldAddItem = await addItemPrompt(choiceName, totalMinutes);
+    /* Keeps track of the time of the day we are at for work */
     let currentTime = helpers.getTomorrowDate();
     currentTime = helpers.addTimeToDate(currentTime, 11, 0);
 
@@ -74,8 +67,10 @@ const workSetup = async () => {
                         tomorrow,
                         startTime,
                         +time));
+                    // Update current time to reflect the end time of the last event
                     currentTime = helpers.addTimeToDate(currentTime, 0, +time);
                     totalMinutes -= +time;
+
                     // eslint-disable-next-line no-await-in-loop
                     shouldAddItem = await addItemPrompt(choiceName, totalMinutes);
                 } else break;
@@ -98,24 +93,28 @@ const workSetup = async () => {
     return items;
 };
 
-const lesiureSetup = async () => {
-    console.log('Setting up lesiure function');
-};
+const lesiureSetup = async () => [];
 
 const choiceDict = {
     Work: workSetup,
     Leisure: lesiureSetup,
 };
 
-(async () => {
-    const choice = await mainPrompt();
-    if (Object.keys(choiceDict).includes(choice)) {
-        const choiceSetup = choiceDict[choice];
+const mainPrompt = async () => {
+    const answer = await new Select({
+        name: 'choice',
+        message: 'What kind of day would you like to have tomorrow?',
+        choices: ['Work', 'Leisure'],
+    }).run();
+    if (Object.keys(choiceDict).includes(answer)) {
+        const choiceSetup = choiceDict[answer];
         const items = await choiceSetup();
-        console.log(JSON.stringify(items, 0, 3));
+        return items;
     }
-})();
+        throw new Error('Invalid choice');
+};
 
 module.exports = {
     workSetup,
+    mainPrompt,
 };

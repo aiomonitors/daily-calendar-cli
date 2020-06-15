@@ -46,6 +46,12 @@ const constructEvent = (name, calendarId, baseDate, startTime, duration) => {
         end: {
             dateTime: formatDate(end),
         },
+        reminders: {
+            useDefault: false,
+            overrides: [
+                { method: 'popup', minutes: 10 },
+            ],
+        },
     };
 };
 

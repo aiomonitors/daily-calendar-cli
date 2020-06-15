@@ -1,137 +1,120 @@
+/* eslint-disable no-console */
 const fs = require('fs');
 const readline = require('readline');
 const { google } = require('googleapis');
-const { getDefaultWorkItems } = require('./helpers');
+const { mainPrompt } = require('./prompts');
 
-// If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
-// The file token.json stores the user's access and refresh tokens, and is
-// created automatically when the authorization flow completes for the first
-// time.
 const TOKEN_PATH = 'token.json';
 
-// Load client secrets from a local file.
-fs.readFile('credentials.json', (err, content) => {
-  if (err) return console.log('Error loading client secret file:', err);
-  // Authorize a client with credentials, then call the Google Calendar API.
-  authorize(JSON.parse(content), listEvents);
-});
-
-/**
- * Create an OAuth2 client with the given credentials, and then execute the
- * given callback function.
- * @param {Object} credentials The authorization client credentials.
- * @param {function} callback The callback to call with the authorized client.
- */
-function authorize(credentials, callback) {
-  const { client_secret, client_id, redirect_uris } = credentials.installed;
-  const oAuth2Client = new google.auth.OAuth2(
-      client_id, client_secret, redirect_uris[0],
-);
-
-  // Check if we have previously stored a token.
-  fs.readFile(TOKEN_PATH, (err, token) => {
-    if (err) return getAccessToken(oAuth2Client, callback);
-    oAuth2Client.setCredentials(JSON.parse(token));
-    callback(oAuth2Client);
-  });
-}
-
-/**
- * Get and store new token after prompting for user authorization, and then
- * execute the given callback with the authorized OAuth2 client.
- * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
- * @param {getEventsCallback} callback The callback for the authorized client.
- */
-function getAccessToken(oAuth2Client, callback) {
-  const authUrl = oAuth2Client.generateAuthUrl({
-    access_type: 'offline',
-    scope: SCOPES,
-  });
-  console.log('Authorize this app by visiting this url:', authUrl);
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  rl.question('Enter the code from that page here: ', (code) => {
-    rl.close();
-    oAuth2Client.getToken(code, (err, token) => {
-      if (err) return console.error('Error retrieving access token', err);
-      oAuth2Client.setCredentials(token);
-      // Store the token to disk for later program executions
-      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-        if (err) return console.error(err);
-        console.log('Token stored to', TOKEN_PATH);
-      });
-      callback(oAuth2Client);
+const getAccessToken = (oAuth2Client, callback) => {
+    const authUrl = oAuth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: SCOPES,
     });
-  });
-}
+    console.log('Authorize this app by visiting this url:', authUrl);
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
+    rl.question('Enter the code from that page here: ', (code) => {
+        rl.close();
+        oAuth2Client.getToken(code, (err, token) => {
+            if (err) return console.error('Error retrieving access token', err);
+            oAuth2Client.setCredentials(token);
+            // Store the token to disk for later program executions
+            // eslint-disable-next-line consistent-return
+            fs.writeFile(TOKEN_PATH, JSON.stringify(token), (writeError) => {
+                if (writeError) return console.error(writeError);
+                console.log('Token stored to', TOKEN_PATH);
+            });
+            return callback(oAuth2Client);
+        });
+    });
+};
 
-/**
- * Lists the next 10 events on the user's primary calendar.
- * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
- */
-async function listEvents(auth) {
-  const calendar = google.calendar({ version: 'v3', auth });
-  calendar.events.list({
-    calendarId: 'primary',
-    timeMin: (new Date()).toISOString(),
-    maxResults: 10,
-    singleEvents: true,
-    orderBy: 'startTime',
-  }, (err, res) => {
-    if (err) return console.log(`The API returned an error: ${err}`);
-    const events = res.data.items;
-    if (events.length) {
-      console.log('Upcoming 10 events:');
-      events.map((event, i) => {
-        const start = event.start.dateTime || event.start.date;
-        console.log(`${start} - ${event.summary}`);
-      });
-    } else {
-      console.log('No upcoming events found.');
-    }
-  });
-  // const d = `${new Date(+new Date() + 1293120).toISOString().split('.')[0]}Z`;
-  // const d2 = `${new Date(+new Date() + 129312021).toISOString().split('.')[0]}Z`;
-  // calendar.events.insert({
-  //   requestBody: {
-  //     summary: 'Test',
-  //     start: {
-  //       dateTime: d,
-  //     },
-  //     end: {
-  //       dateTime: d2,
-  //     },
-  //   },
-  // }, (err, res) => {
-  //   if (err) return console.log(err);
-  //   console.log(res);
-  // });
-
-  const items = getDefaultWorkItems('exid');
-  for (let i = 0; i < items.length; i += 1) {
-    // eslint-disable-next-line consistent-return
+const authorize = (credentials, callback) => {
+    /* eslint-disable camelcase */
     const {
-      summary,
-      start,
-      end,
-      calendarId,
-    } = items[i];
-    const body = {
-      calendarId,
-      requestBody: {
-        summary,
-        start,
-        end,
-      },
-    };
+        client_secret,
+        client_id,
+        redirect_uris,
+    } = credentials.installed;
+    /* eslint-enable camelcase */
+
+    const oAuth2Client = new google.auth.OAuth2(
+        client_id, client_secret, redirect_uris[0],
+    );
 
     // eslint-disable-next-line consistent-return
-    calendar.events.insert(body, (err, res) => {
-      if (err) return console.log(err);
-      console.log(res.data.status);
+    fs.readFile(TOKEN_PATH, (err, token) => {
+        if (err) {
+            return getAccessToken(oAuth2Client, callback);
+        }
+        oAuth2Client.setCredentials(JSON.parse(token));
+        callback(oAuth2Client);
     });
-  }
-}
+};
+
+const main = async (auth) => {
+    const calendar = google.calendar({ version: 'v3', auth });
+    const items = await mainPrompt();
+    for (let i = 0; i < items.length; i += 1) {
+        const {
+            summary,
+            start,
+            end,
+            calendarId,
+            reminders,
+        } = items[i];
+        const body = {
+            calendarId,
+            requestBody: {
+                summary,
+                start,
+                end,
+                reminders,
+            },
+        };
+        // eslint-disable-next-line consistent-return
+        calendar.events.insert(body, (err, res) => {
+            if (err) return console.log(err);
+            if (res.data.status === 'confirmed') {
+                console.log(`Added ${body.requestBody.summary}`);
+            }
+        });
+    }
+};
+
+// eslint-disable-next-line no-unused-vars
+const listEvents = async (auth) => {
+    const calendar = google.calendar({ version: 'v3', auth });
+    calendar.events.list({
+        calendarId: 'primary',
+        timeMin: (new Date()).toISOString(),
+        maxResults: 10,
+        singleEvents: true,
+        orderBy: 'startTime',
+        // eslint-disable-next-line consistent-return
+    }, (err, res) => {
+        if (err) return console.log(`The API returned an error: ${err}`);
+        const events = res.data.items;
+        if (events.length) {
+            console.log('Upcoming 10 events:');
+            // eslint-disable-next-line consistent-return, array-callback-return, no-unused-vars
+            events.map((event, _) => {
+                console.log(event);
+            });
+        } else {
+            console.log('No upcoming events found.');
+        }
+  });
+};
+
+// eslint-disable-next-line consistent-return
+fs.readFile('credentials.json', (err, content) => {
+    if (err) {
+        return console.log('Error loading client secret file:', err);
+    }
+    authorize(JSON.parse(content), main);
+});
