@@ -18,6 +18,8 @@ const addTimeToDate = (
     minutes,
 ) => new Date(date.getTime() + (hours * 60 * 60000) + (minutes * 60000));
 
+const getFormattedTime = (date) => `${date.getHours()}:${date.getMinutes()}`;
+
 const getStartAndEnd = (date, startTime, duration) => {
     const startHours = startTime.split(':')[0];
     const startMinutes = startTime.split(':')[1];
@@ -31,22 +33,25 @@ const getStartAndEnd = (date, startTime, duration) => {
 };
 
 const constructEvent = (name, calendarId, baseDate, startTime, duration) => {
-    const evTimes = getStartAndEnd(baseDate, startTime, duration);
+    const {
+        start,
+        end,
+    } = getStartAndEnd(baseDate, startTime, duration);
     return {
         calendarId,
         summary: name,
         start: {
-            dateTime: formatDate(evTimes.start),
+            dateTime: formatDate(start),
         },
         end: {
-            dateTime: formatDate(evTimes.end),
+            dateTime: formatDate(end),
         },
     };
 };
 
 const getDefaultItems = (fileName, dayType, calendarId) => {
-    const exists = fs.existsSync(fileName);
-    if (exists) {
+    const fileExists = fs.existsSync(fileName);
+    if (fileExists) {
         const fileData = JSON.parse(fs.readFileSync(fileName, 'utf8'));
         if (Object.keys(fileData).includes(dayType)) {
             const dayTypeData = fileData[dayType];
@@ -75,4 +80,6 @@ module.exports = {
     addTimeToDate,
     formatDate,
     getDefaultItems,
+    getFormattedTime,
+    constructEvent,
 };
