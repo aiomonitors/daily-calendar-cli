@@ -33,6 +33,10 @@ const getAccessToken = (oAuth2Client, callback) => {
     });
 };
 
+function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+};
+
 const authorize = (credentials, callback) => {
     /* eslint-disable camelcase */
     const {
@@ -77,6 +81,7 @@ const main = async (auth) => {
             },
         };
         // eslint-disable-next-line consistent-return
+        await wait(1000);
         calendar.events.insert(body, (err, res) => {
             if (err) return console.log(err);
             if (res.data.status === 'confirmed') {
@@ -109,6 +114,11 @@ const listEvents = async (auth) => {
             console.log('No upcoming events found.');
         }
   });
+};
+
+const mainTest = async () => {
+    const items = await mainPrompt();
+    console.log(items);
 };
 
 // eslint-disable-next-line consistent-return

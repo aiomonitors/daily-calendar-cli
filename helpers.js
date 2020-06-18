@@ -64,7 +64,7 @@ const getDefaultItems = (fileName, dayType, calendarId) => {
     if (fileExists) {
         const fileData = JSON.parse(fs.readFileSync(fileName, 'utf8'));
         if (Object.keys(fileData).includes(dayType)) {
-            const dayTypeData = fileData[dayType];
+            const dayTypeData = fileData[dayType]["items"];
             const events = [];
             let baseDate = getTomorrowDate();
             if (+new Date().getHours() <= 20) {
@@ -87,6 +87,18 @@ const getDefaultItems = (fileName, dayType, calendarId) => {
         throw new Error('File was not found');
 };
 
+const getDefaultInfo = (fileName, dayType) => {
+    if (fs.existsSync(fileName)) {
+        const fileData = JSON.parse(fs.readFileSync(fileName, 'utf8'));
+        if (Object.keys(fileData).includes(dayType)) {
+            const { items, ...notItems } = fileData[dayType];
+            return notItems;
+        };
+            throw new Error('Invalid day type');
+    }
+        throw new Error('File was not found')
+}
+
 module.exports = {
     checkMinutesValid,
     getTomorrowDate,
@@ -96,4 +108,5 @@ module.exports = {
     getFormattedTime,
     constructEvent,
     getStartOfDay,
+    getDefaultInfo,
 };

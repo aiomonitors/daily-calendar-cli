@@ -8,14 +8,12 @@ const helpers = require('./helpers');
 
 const addItemPrompt = async (choice, remainingTime) => {
     let answer;
-    if (choice === 'Work') {
-        answer = await new Toggle({
-            // eslint-disable-next-line no-useless-escape
-            message: `Would you like to add an event to tomorrow\'s work schedule? (${remainingTime} minutes available to allocate.)`,
-            enabled: 'Yes',
-            disabled: 'Nope',
-        }).run();
-    }
+    answer = await new Toggle({
+        // eslint-disable-next-line no-useless-escape
+        message: `Would you like to add an event to tomorrow\'s ${choice} schedule? (${remainingTime} minutes available to allocate.)`,
+        enabled: 'Yes',
+        disabled: 'Nope',
+    }).run();
 
     return answer;
 };
@@ -32,29 +30,38 @@ const addItemForm = async () => {
     return answers;
 };
 
-const workSetup = async () => {
-    const choiceName = 'Work';
+const setup = async (choiceName) => {
     const calendarID = 'primary';
     let baseDate = helpers.getTomorrowDate();
     if (+new Date().getHours() <= 20) {
         baseDate = helpers.getStartOfDay();
     }
-    const items = helpers.getDefaultItems('default.json', 'work', calendarID);
+    const items = helpers.getDefaultItems('default.json', choiceName.toLowerCase(), calendarID);
+
+    const {
+        mainTaskStart,
+        mainTaskName,
+        mainTaskTotalMinutes,
+        morningWorkoutTime,
+        morningWorkoutStart,
+    } = helpers.getDefaultInfo('default.json', choiceName.toLowerCase());
+    let totalMinutes = mainTaskTotalMinutes;
+
     const morningWorkout = await new Select({
         name: 'Workout',
         message: 'What kind of workout do you want to do tomorrow morning?',
         choices: ['Home Workout', 'Run', 'Bike'],
     }).run();
 
-    let totalMinutes = 360;
-
     // Add morning workout to the routine
-    items.push(helpers.constructEvent(morningWorkout, calendarID, baseDate, '09:00', 30));
+    items.push(helpers.constructEvent(morningWorkout, calendarID, baseDate, morningWorkoutStart, morningWorkoutTime));
 
     let shouldAddItem = await addItemPrompt(choiceName, totalMinutes);
     /* Keeps track of the time of the day we are at for work */
     let currentTime = helpers.getTomorrowDate();
-    currentTime = helpers.addTimeToDate(currentTime, 11, 0);
+    const startHours = mainTaskStart.split(':')[0];
+    const startMinutes = mainTaskStart.split(':')[1];
+    currentTime = helpers.addTimeToDate(currentTime, startHours, startMinutes);
 
     if (shouldAddItem) {
         do {
@@ -95,16 +102,9 @@ const workSetup = async () => {
             ));
         }
     } else {
-        items.push(helpers.constructEvent('Work', calendarID, baseDate, '11:00', 360));
+        items.push(helpers.constructEvent(mainTaskName, calendarID, baseDate, mainTaskStart, totalMinutes));
     }
     return items;
-};
-
-const lesiureSetup = async () => [];
-
-const choiceDict = {
-    Work: workSetup,
-    Leisure: lesiureSetup,
 };
 
 const mainPrompt = async () => {
@@ -113,15 +113,10 @@ const mainPrompt = async () => {
         message: 'What kind of day would you like to have tomorrow?',
         choices: ['Work', 'Leisure'],
     }).run();
-    if (Object.keys(choiceDict).includes(answer)) {
-        const choiceSetup = choiceDict[answer];
-        const items = await choiceSetup();
-        return items;
-    }
-        throw new Error('Invalid choice');
-};
+    const items = await setup(answer);
+    return items; 
+}
 
 module.exports = {
-    workSetup,
     mainPrompt,
 };
